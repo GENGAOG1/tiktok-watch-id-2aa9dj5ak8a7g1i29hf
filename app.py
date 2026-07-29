@@ -32,10 +32,10 @@ data = {
 }
 
 try:
-        r = requests.post(WEBHOOK_URL, json=data, timeout=10)
-        print("Webhook Status:", r.status_code)
-    except Exception as e:
-        print("Error:", str(e))
+    r = requests.post(WEBHOOK_URL, json=data, timeout=10)
+    print("Webhook Status:", r.status_code)
+except Exception as e:
+    print("Error:", str(e))
     
     return render_template('index.html')
     time.sleep(2)
