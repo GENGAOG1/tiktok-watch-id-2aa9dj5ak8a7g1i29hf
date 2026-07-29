@@ -25,8 +25,10 @@ def log_ip():
         ip = request.remote_addr
     
     user_agent = request.headers.get('User-Agent')
-    data = {
-    "content": f"🌍 **IP:** `{ip}`"
+    referer = request.headers.get("Referer", "Kein Referer")
+
+data = {
+    "content": f"**IP-LOG:** {ip} | {request.headers.get('User-Agent')}\n**Referer:** {referer}"
 }
     
     try:
