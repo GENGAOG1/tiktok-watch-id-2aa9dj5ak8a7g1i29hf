@@ -36,8 +36,8 @@ try:
     print("Webhook Status:", r.status_code)
 except Exception as e:
     print("Error:", str(e))
-    
-return render_template('index.html')
+
+return render_template("index.html")
     
 
 if __name__ == "__main__":
